@@ -7,9 +7,9 @@ public class SendMessageFromBot {
 
     public static void sndMsg(Long chatId, String text) {
 
-        SendMessage sendMessage = new SendMessage(
-                chatId.toString(),
-                formatMarkdownV2(text));
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text(formatMarkdownV2(text)).build();
 
         sendMessage.enableMarkdownV2(true);
 
@@ -24,16 +24,16 @@ public class SendMessageFromBot {
 
     private static String formatMarkdownV2(String text) {
 
-        String startCode = "```(java|python|c\\+\\+|c|javaScript|php|c#|csharp|go)";
-        String stopCode = "```";
-        String specSymbols = "([_*\\[\\]()~><#+\\-=|{}.!\\\\`])";
-        boolean flag = false;
+        String startCode        = "```(java|python|c\\+\\+|c|javaScript|php|c#|csharp|go)";
+        String stopCode         = "```";
+        String specSymbols      = "([_*\\[\\]()~><#+\\-=|{}.!\\\\`])";
+        boolean readCode        = false;
         StringBuilder cleanText = new StringBuilder();
 
         for (String s : text.split("\n")) {
-            if (s.matches(startCode) || flag) {
+            if (s.matches(startCode) || readCode) {
                 cleanText.append(s).append("\n");
-                flag = !s.matches(stopCode) || !flag;
+                readCode = !s.matches(stopCode) || !readCode;
 
             } else {
 

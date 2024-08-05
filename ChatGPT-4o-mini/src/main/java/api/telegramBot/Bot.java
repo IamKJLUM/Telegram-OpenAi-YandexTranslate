@@ -10,9 +10,11 @@ import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateC
 
 public class Bot implements LongPollingSingleThreadUpdateConsumer {
 
-    final private DataExplorer  dataExplorer;
-    final static String         TOKEN_BOT = "5850080708:AAHh1tiLs28L0myK8crE0k2UrFxL6QdgfDo";
-    static final TelegramClient TELEGRAM_CLIENT = new OkHttpTelegramClient(TOKEN_BOT);
+    private final           String         YOU_WONT_PASS   = "https://2ip.ru/member_photo/499398.gif";
+    final private           DataExplorer   dataExplorer;
+    final static            String         TOKEN_BOT       = "TOKEN_BOT";
+    static final            TelegramClient TELEGRAM_CLIENT = new OkHttpTelegramClient(TOKEN_BOT);
+    private final transient String         PASSWORD        = "пароль";
 
     public Bot(DataExplorer dataExplorer) {
 
@@ -24,47 +26,48 @@ public class Bot implements LongPollingSingleThreadUpdateConsumer {
     public void consume(Update update) {
 
         Message message = update.getMessage();
-        String text = message.getText();
-        long chatId = message.getChatId();
+        String  text    = message.getText();
+        long    chatId  = message.getChatId();
 
-        if (text != null) {
-            String username = dataExplorer.getUsername(chatId);
+        if (message.hasText()) {
 
-            if (text.startsWith("/start")) {
-                SendMessageFromBot.sndMsg(chatId,"Введите пароль:");
+            String username = dataExplorer.getUser(chatId);
 
-            } else if (username != null){
+            if (username == null || text.startsWith("/start")) {
 
-                checkNameOrLaunchingDialog(
-                        chatId,
-                        username,
-                        text);
+                if (!checkPasswordCorrect(text, chatId)) {
+                    SendMessageFromBot.sndMsg(chatId,"Введите пароль:");
+                }
 
-            } else if (dataExplorer.checkPasswordCorrect(text, chatId)) {
+            } else {
 
-                username = "";
-                checkNameOrLaunchingDialog(
-                        chatId,
-                        username,
-                        text);
+                checkNameOrLaunchingDialog(chatId, username, text);
             }
         }
+    }
+
+    public boolean checkPasswordCorrect(String password, long chatId) {
+
+        if (PASSWORD.equals(password)) {
+
+            SendMessageFromBot.sndMsg(chatId,"Верно!");
+            dataExplorer.putUser(chatId, "");
+            SendMessageFromBot.sndMsg(chatId,"Введите ваше имя:");
+            return true;
+        }
+        SendMessageFromBot.sndMsg(chatId,"You won't pass " + YOU_WONT_PASS + "\nWrong password");
+        return false;
     }
 
     private void checkNameOrLaunchingDialog(long chatId, String username, String text) {
 
         if (username.isEmpty()) {
 
-            dataExplorer.putUser(chatId,"empty");
-            SendMessageFromBot.sndMsg(chatId,"Введите ваше имя:");
-
-        } else if (username.equals("empty")) {
-
+            dataExplorer.putUser(chatId, text);
             dataExplorer.putUserNameDB(chatId, text);
             SendMessageFromBot.sndMsg(chatId,"Добро пожаловать " + text);
 
         } else
-
             dataExplorer.putDataOpenAi(chatId, text);
     }
 

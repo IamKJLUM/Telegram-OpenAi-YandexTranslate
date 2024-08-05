@@ -3,6 +3,7 @@ package main;
 import api.telegramBot.SendMessageFromBot;
 import database.ConnectToDB;
 import database.EntityUserChat;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 import java.util.List;
 import java.util.Map;
@@ -10,15 +11,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DataExplorer {
 
-    private final           String                YOU_WONT_PASS  = "https://2ip.ru/member_photo/499398.gif";
     public final static     String                EnglishRegex   = "[^\u0400-\u04FF\u0500-\u052F]+";
-    private final transient String                PASSWORD       = "пароль";
-    public final static     long                  ADMIN_ID       = 0; // CHAT_ID_ADMIN;
+    public final static     long                  ADMIN_ID       = 0;
     private final ConcurrentHashMap<Long, String> dataTranslate  = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, String> dataPostman    = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, String> dataOpenAi     = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, String> listEnableUser = new ConcurrentHashMap<>();
-    private final ConnectToDB connectToDatabase;
+    private final ConnectToDB                     connectToDatabase;
 
     public DataExplorer(ConnectToDB connectToDatabase) {
         this.connectToDatabase = connectToDatabase;
@@ -36,26 +35,28 @@ public class DataExplorer {
                 String name = record.getName();
                 String context = record.getText();
                 listEnableUser.put(chatId, name);
-                connectToDatabase.recoveryContextDB(chatId,context);
+                connectToDatabase.recoveryContextDB(chatId, context);
             }
         }
     }
     public void putUser(Long chatId, String name) {
 
         listEnableUser.put(chatId, name);
-        System.out.println("Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
-//        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
+        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
     }
     public void putUserNameDB(Long chatId, String name) {
 
-        listEnableUser.put(chatId, name);
-        connectToDatabase.createRecord(chatId, name);
-        System.out.println("Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
-//        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
+        if (connectToDatabase.createRecord(chatId, name, 0)) {
+            listEnableUser.put(chatId, name);
+            System.out.println("Пользователь добавлен в базу данных: " + name + "\nchatId: " + chatId);
+        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
+        } else
+            listEnableUser.put(chatId, "");
+            System.err.println("Пользователь не добавлен");
+            SendMessageFromBot.sndMsg(chatId, "Вы используете недопустимые символы или слишком длинное имя, введи имя еще раз");
     }
-    public String getUsername(long chatId) {
-        String username = listEnableUser.get(chatId);
-        return username == null? "": username;
+    public String getUser(long chatId) {
+        return listEnableUser.get(chatId);
     }
     public void removeUser(Long chatId) {
 
@@ -63,7 +64,7 @@ public class DataExplorer {
             String name = listEnableUser.get(chatId);
             listEnableUser.remove(chatId);
             connectToDatabase.deleteRecord(chatId);
-//            SendMessageFromBot.sndMsg(ADMIN_ID, "Удален пользователь: " + name + "\nchatId: " + chatId);
+            SendMessageFromBot.sndMsg(ADMIN_ID, "Удален пользователь: " + name + "\nchatId: " + chatId);
         } else {
             System.out.println("Warning -deleteUserInList");
         }
@@ -113,16 +114,5 @@ public class DataExplorer {
     public void removeDataOpenAi(Long chatId) {
         if (chatId > 0)
             dataOpenAi.remove(chatId);
-    }
-
-    public boolean checkPasswordCorrect(String password, long chatId) {
-        if (this.PASSWORD.equals(password)) {
-
-            SendMessageFromBot.sndMsg(chatId,"Right!");
-            listEnableUser.put(chatId, "");
-            return true;
-        }
-        SendMessageFromBot.sndMsg(chatId,"You won't pass " + YOU_WONT_PASS + "\nWrong password");
-        return false;
     }
 }

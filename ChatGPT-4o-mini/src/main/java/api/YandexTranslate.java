@@ -15,8 +15,9 @@ import java.io.IOException;
 public class YandexTranslate implements Runnable {
 
     private final DataExplorer dataExplorer;
-    private final String       oAuthToken = "oAuthToken";
-    private final String       FolderId   = "FolderId";
+    private static final String O_AUTH_TOKEN       = "O_AUTH_TOKEN";
+    private static final String FOLDER_ID          = "FOLDER_ID";
+    private static final String LANGUAGE_TRANSLATE = "ru";
 
     public YandexTranslate(DataExplorer dataExplorer) {
         this.dataExplorer = dataExplorer;
@@ -42,7 +43,7 @@ public class YandexTranslate implements Runnable {
 
                         dataExplorer.putPostman(
                                 chatId,
-                                connectionToYandex(text, "ru"));
+                                connectionToYandex(text, LANGUAGE_TRANSLATE));
 
                     } else {
 
@@ -72,7 +73,7 @@ public class YandexTranslate implements Runnable {
         try {
             body.put("targetLanguageCode", langTrans);
             body.put("texts", text);
-            body.put("folderId", FolderId);
+            body.put("folderId", FOLDER_ID);
 
             response = Jsoup.connect("https://translate.api.cloud.yandex.net/translate/v2/translate")
                     .header("Authorization", "Bearer " + iAmToken)
@@ -93,7 +94,7 @@ public class YandexTranslate implements Runnable {
         JSONObject jsonGetToken = new JSONObject();
         try {
 
-            jsonGetToken.put("yandexPassportOauthToken", oAuthToken);
+            jsonGetToken.put("yandexPassportOauthToken", O_AUTH_TOKEN);
 
         } catch (JSONException e) {
             e.printStackTrace();

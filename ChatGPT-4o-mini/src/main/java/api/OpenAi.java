@@ -16,14 +16,14 @@ public class OpenAi implements Runnable {
     static final   String        TOKEN_OPENAI = "TOKEN_OPENAI";
     private        DataExplorer  dataExplorer;
     private static OpenAiService service;
-    private        String        MODEL;
+    private static String        MODEL;
 
     public OpenAi() {}
 
     public OpenAi(DataExplorer dataExplorer, ModelEnum model) {
 
         this.dataExplorer = dataExplorer;
-        service = new OpenAiService(TOKEN_OPENAI, Duration.ofSeconds(420));
+        service = SingletonService.getInstance().getService();
         MODEL = model.getName();
         System.out.println("OpenAi successful initialization");
     }
@@ -89,6 +89,25 @@ public class OpenAi implements Runnable {
         } else {
 // Bot ru -> OpenAi ru -> Translate en
             dataExplorer.putTranslate(chatId, text);
+        }
+    }
+
+    private static class SingletonService {
+
+        static OpenAi.SingletonService instance;
+        private final OpenAiService service;
+
+        public OpenAiService getService() {
+            return service;
+        }
+        private SingletonService() {
+
+            service = new OpenAiService(TOKEN_OPENAI, Duration.ofSeconds(420));
+        }
+        protected static SingletonService getInstance() {
+
+            if(instance == null) return new SingletonService();
+            return instance;
         }
     }
 
