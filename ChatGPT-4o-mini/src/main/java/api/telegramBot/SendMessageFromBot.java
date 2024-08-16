@@ -19,7 +19,6 @@ public class SendMessageFromBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
-
     }
 
     private static String formatMarkdownV2(String text) {
@@ -41,7 +40,6 @@ public class SendMessageFromBot {
                 cleanText.append(escapedText).append("\n");
             }
         }
-
         return cleanText.toString();
     }
 }

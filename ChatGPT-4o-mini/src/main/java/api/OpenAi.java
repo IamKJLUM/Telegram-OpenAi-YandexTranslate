@@ -13,7 +13,7 @@ import java.time.Duration;
 
 public class OpenAi implements Runnable {
 
-    static final   String        TOKEN_OPENAI = "TOKEN_OPENAI";
+    static final   String        TOKEN_OPENAI = "";
     private        DataExplorer  dataExplorer;
     private static OpenAiService service;
     private static String        MODEL;

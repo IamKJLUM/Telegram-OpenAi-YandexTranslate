@@ -14,10 +14,10 @@ import java.io.IOException;
 
 public class YandexTranslate implements Runnable {
 
-    private final DataExplorer dataExplorer;
-    private static final String O_AUTH_TOKEN       = "O_AUTH_TOKEN";
-    private static final String FOLDER_ID          = "FOLDER_ID";
-    private static final String LANGUAGE_TRANSLATE = "ru";
+    private final        DataExplorer dataExplorer;
+    private static final String       O_AUTH_TOKEN       = "";
+    private static final String       FOLDER_ID          = "";
+    private static final String       LANGUAGE_TRANSLATE = "";
 
     public YandexTranslate(DataExplorer dataExplorer) {
         this.dataExplorer = dataExplorer;

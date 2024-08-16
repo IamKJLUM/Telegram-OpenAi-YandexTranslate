@@ -1,27 +1,24 @@
 package database;
 
 import api.OpenAi;
-import main.DataExplorer;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConnectToDB {
 
-    private final ConcurrentHashMap<Long, String> cashDB = new ConcurrentHashMap<>();
-    private final        Session session;
-    private static final int     LIMIT_MESSAGE     = 15;
-    private static final int     LIMIT_TEXT_LENGTH = 6500;
-    private static final float   COMPRESSION_TEXT  = 1.5f;
-    private static final int     THRESHOLD_MESSAGE = 3;
-    private static final String  NAME_PATTERN      = "^[\\p{L}\\p{N}\\p{Zs}\\p{So}]+$";
-    private static final int     MAX_NAME_LENGTH   = 50;
+    private final        OpenAi                          OPEN_AI           = new OpenAi();
+    private final        ConcurrentHashMap<Long, String> cashDB            = new ConcurrentHashMap<>();
+    private final        Session                         session;
+    private static final int                             LIMIT_MESSAGE     = 15;
+    private static final int                             LIMIT_TEXT_LENGTH = 6500;
+    private static final float                           COMPRESSION_TEXT  = 1.5f;
+    private static final int                             THRESHOLD_MESSAGE = 3;
+    private static final int                             MAX_NAME_LENGTH   = 20;
 
-    private final OpenAi  OPEN_AI           = new OpenAi();
 
     public ConnectToDB() {
         this.session = SingletonSession.getInstance().getSession();
@@ -33,25 +30,29 @@ public class ConnectToDB {
 
     private void logic(long chatId) {
 
-        EntityUserChat chat         = getRecordFromDB(chatId);
-        String         name         = chat.getName();
-        String         context      = textProcessing(chat.getText(), chatId);
-        int            countMessage = chat.getCountMessage();
-        int            version      = chat.getVersion();
+        EntityUserChat chat     = getRecordFromDB(chatId);
 
-        if (countMessage >= LIMIT_MESSAGE || context.length() >= LIMIT_TEXT_LENGTH) {
+        if (chat != null) {
 
-            createRecord(chatId, name, version);
-        } else {
-            if ((countMessage + 1) % THRESHOLD_MESSAGE == 0) {
+            String name         = chat.getName();
+            String context      = textProcessing(chat.getText(), chatId);
+            int    countMessage = chat.getCountMessage();
+            int    version      = chat.getVersion();
 
-                context = compressionText(context);
-                cashDB.put(chatId, context);
+            if (countMessage >= LIMIT_MESSAGE || context.length() >= LIMIT_TEXT_LENGTH) {
+
+                createRecord(chatId, name, version);
+            } else {
+                if ((countMessage + 1) % THRESHOLD_MESSAGE == 0) {
+
+                    context = compressionText(context);
+                    cashDB.put(chatId, context);
+                }
+                chat.setChatId(chatId);
+                chat.setCountMessage(countMessage + 1);
+                chat.setText(context);
+                updateRecord(chat);
             }
-            chat.setChatId(chatId);
-            chat.setCountMessage(countMessage + 1);
-            chat.setText(context);
-            updateRecord(chat);
         }
     }
 
@@ -104,13 +105,18 @@ public class ConnectToDB {
 
     private String lastMessage(long chatId) {
 
-        String context = getCashDBChatForId(chatId);
-        context = context.substring(context.lastIndexOf("User - "));
-        if (context.length() != LIMIT_MESSAGE) {
-            cashDB.put(chatId, context);
-            return context;
-        } else
-            return "";
+        String context     = getCashDBChatForId(chatId);
+        String emptyString = "";
+
+        if (context.length() > 0) {
+            context = context.substring(context.lastIndexOf("User - "));
+            if (context.length() != LIMIT_TEXT_LENGTH) {
+                cashDB.put(chatId, context);
+                return context;
+            } else
+                return emptyString;
+        }
+        return emptyString;
     }
 
     public boolean createRecord(long chatId, String name, int version) {
@@ -120,12 +126,12 @@ public class ConnectToDB {
         }
 
         EntityUserChat newUserChat = new EntityUserChat();
-        String newText = cashDB.get(chatId);
+        String lastContext = lastMessage(chatId);
 
-        newUserChat.setCountMessage(0);
+        newUserChat.setCountMessage(lastContext.length() > 0? 1: 0);
         newUserChat.setChatId(chatId);
         newUserChat.setName(name);
-        newUserChat.setText(newText != null? newText: "");
+        newUserChat.setText(lastContext);
         newUserChat.setVersion(version);
 
         Transaction transaction = null;
@@ -143,8 +149,9 @@ public class ConnectToDB {
         }
         return true;
     }
+
     private boolean isValidName(String name) {
-        return name != null && name.length() <= MAX_NAME_LENGTH && name.matches(NAME_PATTERN);
+        return name != null && name.length() <= MAX_NAME_LENGTH && name.matches(api.telegramBot.Bot.NAME_PATTERN);
     }
 
     private void updateRecord(EntityUserChat userChat) {
@@ -200,6 +207,7 @@ public class ConnectToDB {
     public void deleteRecord(Long chatId) {
 
         Transaction transaction = null;
+        cashDB.remove(chatId);
 
         try {
 

@@ -1,27 +1,63 @@
 package main;
 
-import api.telegramBot.SendMessageFromBot;
 import database.ConnectToDB;
 import database.EntityUserChat;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import api.telegramBot.SendMessageFromBot;
+import static api.telegramBot.Bot.ADMIN_ID;
 
-import java.util.List;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
 
 public class DataExplorer {
 
-    public final static     String                EnglishRegex   = "[^\u0400-\u04FF\u0500-\u052F]+";
-    public final static     long                  ADMIN_ID       = 0;
-    private final ConcurrentHashMap<Long, String> dataTranslate  = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, String> dataPostman    = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, String> dataOpenAi     = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, String> listEnableUser = new ConcurrentHashMap<>();
-    private final ConnectToDB                     connectToDatabase;
+    public final static String                          EnglishRegex   = "[^\u0400-\u04FF\u0500-\u052F]+";
+    private final       ConcurrentHashMap<Long, String> dataTranslate  = new ConcurrentHashMap<>();
+    private final       ConcurrentHashMap<Long, String> dataPostman    = new ConcurrentHashMap<>();
+    private final       ConcurrentHashMap<Long, String> dataOpenAi     = new ConcurrentHashMap<>();
+    private final       ConcurrentHashMap<Long, String> listEnableUser = new ConcurrentHashMap<>();
+    private final       ConnectToDB                     connectToDatabase;
 
     public DataExplorer(ConnectToDB connectToDatabase) {
         this.connectToDatabase = connectToDatabase;
         recoveryEnableUserDB();
+    }
+
+    public void adminSaid(long chatId, String text) {
+        putPostman(chatId, text);
+    }
+    public void adminSaid(String text, String name) {
+        for (EntityUserChat entityUserChat: connectToDatabase.getAllRecords()) {
+
+            if (entityUserChat.getName().equals(name)) {
+                putPostman(entityUserChat.getChatId(), text);
+            }
+        }
+    }
+    public void adminSaid(String text) {
+
+        for (long chatId: listEnableUser.keySet()) {
+            adminSaid(chatId, text);
+        }
+    }
+
+    public void promtForUsers(long chatId, String text) {
+        putDataOpenAi(chatId, text);
+    }
+    public void promtForUsers(String text, String name) {
+        for (EntityUserChat entityUserChat: connectToDatabase.getAllRecords()) {
+
+            if (entityUserChat.getName().equals(name)) {
+                putDataOpenAi(entityUserChat.getChatId(), text);
+            }
+        }
+    }
+    public void promtForUsers(String text) {
+
+        for (long chatId: listEnableUser.keySet()) {
+            promtForUsers(chatId, text);
+        }
     }
 
     private void recoveryEnableUserDB() {
@@ -42,31 +78,38 @@ public class DataExplorer {
     public void putUser(Long chatId, String name) {
 
         listEnableUser.put(chatId, name);
-        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
+//        SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
     }
     public void putUserNameDB(Long chatId, String name) {
 
         if (connectToDatabase.createRecord(chatId, name, 0)) {
             listEnableUser.put(chatId, name);
-            System.out.println("Пользователь добавлен в базу данных: " + name + "\nchatId: " + chatId);
+            System.out.println("The user has been added to the database:\nname: [" + name + "]\nchatId: [" + chatId + "]");
         SendMessageFromBot.sndMsg(ADMIN_ID, "Добавлен новый пользователь: " + name + "\nchatId: " + chatId);
-        } else
+        } else {
             listEnableUser.put(chatId, "");
-            System.err.println("Пользователь не добавлен");
-            SendMessageFromBot.sndMsg(chatId, "Вы используете недопустимые символы или слишком длинное имя, введи имя еще раз");
+            System.err.println("The user can't added to the database");
+            SendMessageFromBot.sndMsg(chatId, "Вы используете недопустимые символы или слишком длинное имя, введите имя еще раз");
+        }
     }
     public String getUser(long chatId) {
         return listEnableUser.get(chatId);
     }
-    public void removeUser(Long chatId) {
+    public void removeUser(String name) {
 
-        if (!chatId.equals(ADMIN_ID)) {
-            String name = listEnableUser.get(chatId);
+        Long chatId = listEnableUser.entrySet().stream().
+                filter(longStringEntry -> longStringEntry.getValue().equals(name)).
+                map(Map.Entry::getKey).
+                findFirst().
+                orElse(null);
+
+        if (chatId != null && chatId != ADMIN_ID) {
+
             listEnableUser.remove(chatId);
             connectToDatabase.deleteRecord(chatId);
-            SendMessageFromBot.sndMsg(ADMIN_ID, "Удален пользователь: " + name + "\nchatId: " + chatId);
+            SendMessageFromBot.sndMsg(ADMIN_ID, "User [" + name + "] delete\nchatId: " + chatId);
         } else {
-            System.out.println("Warning -deleteUserInList");
+            System.out.println("The user could not be deleted:\nchatId: [" + chatId + "]");
         }
     }
 

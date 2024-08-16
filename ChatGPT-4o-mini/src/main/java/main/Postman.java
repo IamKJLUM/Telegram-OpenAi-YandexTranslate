@@ -7,6 +7,7 @@ import java.util.Map;
 public class Postman implements Runnable {
 
     private final DataExplorer dataExplorer;
+    private final int          LIMIT_LENGTH = 4096;
 
     public Postman(DataExplorer dataExplorer) {
         this.dataExplorer = dataExplorer;
@@ -25,39 +26,29 @@ public class Postman implements Runnable {
                     String text = entry.getValue();
                     dataExplorer.removeDataPostman(chatId);
 
-                    if (text.length() > 3000) {
-
-                        int look = 1;
-
-                        for (;;) {
-
-                            if (look + 3000 > text.length()) {
-
-                                SendMessageFromBot.sndMsg(DataExplorer.ADMIN_ID,text.replace("\"", "").substring(look));
-                                break;
-                            }
-
-
-                            SendMessageFromBot.sndMsg(
-                                    chatId,
-                                    text.replace("\"", "").substring(look,look + 3000));
-
-                            look += 3000;
-
-                            try {
-                                Thread.sleep(4000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-
+                    if(text.length() >= LIMIT_LENGTH) {
+                        largeText(chatId, text);
                     } else {
-
                         SendMessageFromBot.sndMsg(chatId, text);
                     }
                 }
             }
+        }
+    }
+
+    private void largeText(long chatId, String text) {
+
+        int i = 0;
+        StringBuilder result = new StringBuilder();
+
+        for (char symbol: text.toCharArray()) {
+            if (i >= (LIMIT_LENGTH -1)) {
+                SendMessageFromBot.sndMsg(chatId, result.toString());
+                result.setLength(0);
+                i = 0;
+            }
+            result.append(symbol);
+            i++;
         }
     }
 }

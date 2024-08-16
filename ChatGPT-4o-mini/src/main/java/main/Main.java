@@ -8,15 +8,19 @@ import database.ConnectToDB;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 
+import java.util.Locale;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class Main {
 
     public static void main(String[] args) {
 
-        ConnectToDB connectToDB = new ConnectToDB();
+        ConnectToDB  connectToDB  = new ConnectToDB();
         DataExplorer dataExplorer = new DataExplorer(connectToDB);
-        Bot bot = new Bot(dataExplorer);
+        Bot          bot          = new Bot(dataExplorer);
 
         try {
 
